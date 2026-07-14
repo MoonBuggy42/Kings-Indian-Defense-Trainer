@@ -3,6 +3,9 @@
 'use strict';
 
 const MAX_MOVES = 25;
+const BOOK_PRIORITY_WEIGHT = 20;      // how strongly top theory influences book selection
+const BOOK_NEW_LINE_MARGIN = 40;      // cp tolerance to choose a new/less-played book line
+const BOOK_SAFE_LINE_MARGIN = 80;     // cp tolerance to use a book line at all
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let chess = new Chess();
@@ -303,6 +306,25 @@ const OWENS_LINES = [
     ['g2g3','b7b6','c8b7','d2d4','e7e6','g1f3','f8b4'],
 ];
 
+const OWENS_LINE_PRIORITY = {
+    // Top theory lines for Owen's Defense
+    'e2e4|b7b6|d2d4|c8b7|b1c3|e7e6|g1f3|g8f6': 10,
+    'e2e4|b7b6|d2d4|c8b7|b1c3|e7e6|g1f3|f8b4': 12,
+    'e2e4|b7b6|d2d4|c8b7|b1c3|g8f6|e4e5|f6d5': 14,
+    'e2e4|b7b6|d2d4|c8b7|g1f3|e7e6|b1c3|g8f6': 16,
+    'e2e4|b7b6|d2d4|c8b7|g1f3|e7e6|b1c3|f8b4': 18,
+    'e2e4|b7b6|d2d4|c8b7|b1c3|e7e6|f1d3|g8f6': 20,
+    'e2e4|b7b6|d2d4|c8b7|g1f3|e7e6|b1c3|e7e6': 22,
+    'd2d4|b7b6|g1f3|c8b7|e2e4|e7e6|b1c3|g8f6': 24,
+    'd2d4|b7b6|g1f3|c8b7|e2e4|e7e6|g1f3|f8g7': 26,
+    'c2c4|b7b6|g1f3|c8b7|d2d4|e7e6|b1c3|g8f6': 28,
+    'g2g3|b7b6|f1g2|c8b7|d2d4|e7e6|g1f3|g8f6': 30,
+    'g2g3|b7b6|f1g2|c8b7|d2d4|e7e6|b1c3|g8f6': 32,
+    'g2g3|b7b6|c8b7|d2d4|e7e6|g1f3|f8g7': 34,
+    'e2e4|b7b6|d2d4|c8b7|c1e3|e7e6|b1c3|f8b4': 36,
+    'e2e4|b7b6|d2d4|c8b7|f2f3|e7e6|b1c3|g8f6': 38,
+};
+
 function rememberRecentBookLine(hash) {
     recentBookLines.unshift(hash);
     if (recentBookLines.length > MAX_RECENT_BOOK_LINES) recentBookLines.length = MAX_RECENT_BOOK_LINES;
@@ -317,43 +339,57 @@ function isBookMoveAcceptable(uci) {
     const candidate = entries.find(e => e.move === uci);
     if (!candidate) return false;
 
-    return candidate.score >= bestScore - 40;
+    return candidate.score >= bestScore - BOOK_SAFE_LINE_MARGIN;
 }
 
 function getBookMove() {
     const history = chess.history({ verbose: true }).map(m => m.from + m.to + (m.promotion || ''));
     const ply = history.length;
 
-    const matching = OWENS_LINES.map(line => {
+    const bestScore = Math.max(...Object.values(sfMultiPV).map(e => e.score), -Infinity);
+    const recentHashes = new Set(recentBookLines);
+
+    const candidates = OWENS_LINES.map(line => {
         const hash = line.join('|');
         const used = recentBookLines.filter(item => item === hash).length;
-        return { line, hash, used };
+        const priority = OWENS_LINE_PRIORITY[hash] ?? 100;
+        return { line, hash, used, priority, isRecent: recentHashes.has(hash), isSession: sessionBookLineHistory.has(hash) };
     }).filter(entry => {
         if (entry.line.length <= ply) return false;
         for (let i = 0; i < ply; i++) {
             if (entry.line[i] !== history[i]) return false;
         }
         return true;
+    }).map(entry => {
+        const next = entry.line[ply];
+        const from = next?.slice(0, 2);
+        const to = next?.slice(2, 4);
+        const legal = next && chess.moves({ verbose: true }).find(m => m.from === from && m.to === to);
+        const candidate = Object.values(sfMultiPV).find(e => e.move === next);
+        const scoreLoss = candidate ? bestScore - candidate.score : Infinity;
+        return { ...entry, next, legal: Boolean(legal), scoreLoss, candidate };
+    }).filter(entry => entry.next && entry.legal && entry.candidate && entry.scoreLoss <= BOOK_SAFE_LINE_MARGIN);
+
+    if (!candidates.length) return null;
+
+    const freshCandidates = candidates.filter(entry => !entry.isRecent && entry.scoreLoss <= BOOK_NEW_LINE_MARGIN);
+    const candidatePool = freshCandidates.length ? freshCandidates : candidates;
+
+    candidatePool.sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        const scoreA = (a.isSession ? 200 : 0) + a.used * 20 + a.scoreLoss * 2;
+        const scoreB = (b.isSession ? 200 : 0) + b.used * 20 + b.scoreLoss * 2;
+        return scoreA - scoreB;
     });
 
-    if (!matching.length) return null;
+    const topScore = (candidatePool[0]?.isSession ? 200 : 0) + candidatePool[0].used * 20 + candidatePool[0].scoreLoss * 2 + candidatePool[0].priority * 4;
+    const topChoices = candidatePool.filter(entry => {
+        const score = (entry.isSession ? 200 : 0) + entry.used * 20 + entry.scoreLoss * 2 + entry.priority * 4;
+        return score <= topScore + 4;
+    });
 
-    const minUsed = Math.min(...matching.map(entry => entry.used));
-    const leastUsed = matching.filter(entry => entry.used === minUsed && !sessionBookLineHistory.has(entry.hash));
-    const pool = leastUsed.length ? leastUsed : matching.filter(entry => !sessionBookLineHistory.has(entry.hash));
-    const candidates = pool.length ? pool : matching;
-
-    // Prefer the least used candidate line and a random variation inside that set.
-    const chosenEntry = candidates[Math.floor(Math.random() * candidates.length)];
-    const chosen = chosenEntry.line[ply];
-    if (!chosen) return null;
-
-    const from = chosen.slice(0, 2);
-    const to = chosen.slice(2, 4);
-    const legal = chess.moves({ verbose: true }).find(m => m.from === from && m.to === to);
-    if (!legal) return null;
-
-    if (!isBookMoveAcceptable(chosen)) return null;
+    const chosenEntry = topChoices[Math.floor(Math.random() * topChoices.length)];
+    const chosen = chosenEntry.next;
 
     sessionBookLineHistory.add(chosenEntry.hash);
     rememberRecentBookLine(chosenEntry.hash);
