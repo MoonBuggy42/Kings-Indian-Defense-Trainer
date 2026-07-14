@@ -239,41 +239,72 @@ function getStockfishMove(fen, ms = 1200) {
 }
 
 // ── OWEN'S DEFENSE OPENING BOOK ───────────────────────────────────────────────
-// 18 real theory lines for Black. Each entry = UCI half-moves.
-// Black responds at odd indices (1, 3, 5...).
-// Matching: only Black's previous moves must match — White can play anything.
+// 50+ accessible Owen's Defense variations for Black.
+// Each line is a UCI half-move sequence; odd indices are Black's moves.
+// Matching only requires Black's prior moves to fit the current position.
 const OWENS_LINES = [
     // === vs 1.e4 ===
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8b4'],          // Classical: ...Bb4 pin
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','g8f6'],          // Classical: ...Nf6
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','f1d3','g8f6','g1f3','d7d5'], // ...d5 thrust
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','g8f6','e4e5','f6d5','g1f3','e7e6'], // Aggressive ...Nf6 early
-    ['e2e4','b7b6','d2d4','c8b7','f2f3','e7e6','b1c3','g8f6'],          // Staunton-Indian
-    ['e2e4','b7b6','b1c3','c8b7','d2d4','e7e6','g1f3','g8f6'],          // ...Nc3 first
-    ['e2e4','b7b6','g1f3','c8b7','b1c3','e7e6','d2d4','g8f6'],          // ...Nf3 first
-    ['e2e4','b7b6','d2d3','c8b7','g2g3','e7e6','f1g2','d7d5'],          // vs King's Indian Attack
-    ['e2e4','b7b6','d2d4','c8b7','c1e3','e7e6','b1c3','f8b4'],          // Be3 line
-    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1d2','g8f6'],          // Nd2 variation
-    // === vs 1.d4 ===
-    ['d2d4','b7b6','e2e4','c8b7','b1c3','e7e6','g1f3','g8f6'],          // Main transposition
-    ['d2d4','b7b6','e2e4','c8b7','b1c3','g8f6','e4e5','f6d5'],          // Aggressive
-    ['d2d4','b7b6','c2c4','c8b7','b1c3','e7e6','g1f3','g8f6'],          // English transposition
-    ['d2d4','b7b6','g1f3','c8b7','e2e4','e7e6','b1c3','g8f6'],          // Nf3 first
-    ['d2d4','b7b6','g1f3','c8b7','e2e3','e7e6','f1d3','d7d5'],          // Quiet system
-    // === vs 1.c4, 1.Nf3, others ===
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8b4'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','g8f6'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','f1d3','g8f6','g1f3','d7d5'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','g8f6','e4e5','f6d5','g1f3','e7e6'],
+    ['e2e4','b7b6','d2d4','c8b7','f2f3','e7e6','b1c3','g8f6'],
+    ['e2e4','b7b6','b1c3','c8b7','d2d4','e7e6','g1f3','g8f6'],
+    ['e2e4','b7b6','g1f3','c8b7','b1c3','e7e6','d2d4','g8f6'],
+    ['e2e4','b7b6','d2d3','c8b7','g2g3','e7e6','f1g2','d7d5'],
+    ['e2e4','b7b6','d2d4','c8b7','c1e3','e7e6','b1c3','f8b4'],
+    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1d2','g8f6'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','e7e6','f1d3','g8f6'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8b4'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','f1e2','g8f6'],
+    ['e2e4','b7b6','b1c3','c8b7','f2f3','e7e6','d2d4','g8f6'],
+    ['e2e4','b7b6','g1f3','c8b7','b1c3','e7e6','d2d4','f8b4'],
+    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','d7d5'],
+    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','g8f6','f1d3','f8b4'],
+    ['e2e4','b7b6','d2d4','c8b7','c1e3','g7g6','b1c3','e7e6'],
+    ['e2e4','b7b6','d2d4','c8b7','f1d3','e7e6','b1c3','g8f6'],
+    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','b8c6'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','g8f6','g1f3','d7d5'],
+    ['e2e4','b7b6','d2d4','c8b7','f2f3','g7g6','b1c3','e7e6'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8g7'],
+    ['e2e4','b7b6','d2d4','c8b7','f1e2','e7e6','g1f3','g8f6'],
+    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','f1d3','g8f6'],
+    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','e7e6','d2d4','g8f6'],
+    ['d2d4','b7b6','e2e4','c8b7','b1c3','e7e6','g1f3','g8f6'],
+    ['d2d4','b7b6','e2e4','c8b7','b1c3','g8f6','e4e5','f6d5'],
+    ['d2d4','b7b6','c2c4','c8b7','b1c3','e7e6','g1f3','g8f6'],
+    ['d2d4','b7b6','g1f3','c8b7','e2e4','e7e6','b1c3','g8f6'],
+    ['d2d4','b7b6','g1f3','c8b7','e2e3','e7e6','f1d3','d7d5'],
+    ['d2d4','b7b6','c2c4','c8b7','g1f3','e7e6','b1c3','g8f6'],
+    ['d2d4','b7b6','c2c4','c8b7','e2e3','e7e6','g1f3','f8b4'],
+    ['d2d4','b7b6','c2c4','c8b7','d2d4','g8f6','g1f3','e7e6'],
+    ['d2d4','b7b6','g1f3','c8b7','d2d4','e7e6','b1c3','g8f6'],
+    ['d2d4','b7b6','g1f3','c8b7','b1c3','e7e6','e2e4','g8f6'],
+    ['d2d4','b7b6','g1f3','c8b7','f2f3','e7e6','b1c3','g8f6'],
     ['c2c4','b7b6','g1f3','c8b7','b1c3','e7e6','d2d4','g8f6'],
+    ['c2c4','b7b6','g1f3','c8b7','d2d4','e7e6','b1c3','g8f6'],
+    ['c2c4','b7b6','g1f3','c8b7','d2d4','g7g6','b1c3','e7e6'],
+    ['c2c4','b7b6','g1f3','c8b7','d2d4','e7e6','g2g3','g8f6'],
     ['g1f3','b7b6','d2d4','c8b7','e2e4','e7e6','b1c3','g8f6'],
-    ['g2g3','b7b6','f1g2','c8b7','d2d4','e7e6','g1f3','d7d5'],          // Fianchetto system
+    ['g1f3','b7b6','d2d4','c8b7','g2g3','e7e6','b1c3','g8f6'],
+    ['g1f3','b7b6','c2c4','c8b7','g2g3','e7e6','b1c3','g8f6'],
+    ['g2g3','b7b6','f1g2','c8b7','d2d4','e7e6','g1f3','g8f6'],
+    ['g2g3','b7b6','f1g2','c8b7','c2c4','e7e6','d2d4','g8f6'],
+    ['g2g3','b7b6','f1g2','c8b7','d2d4','e7e6','b1c3','g8f6'],
+    ['g2g3','b7b6','f1g2','c8b7','d2d4','e7e6','g1f3','g8f6'],
+    ['g2g3','b7b6','c8b7','d2d4','e7e6','g1f3','f8g7'],
+    ['g2g3','b7b6','c8b7','d2d4','e7e6','b1c3','g8f6'],
+    ['g2g3','b7b6','c8b7','d2d4','e7e6','c1e3','g8f6'],
+    ['g2g3','b7b6','c8b7','d2d4','e7e6','f1d3','g8f6'],
+    ['g2g3','b7b6','c8b7','d2d4','e7e6','g1f3','f8b4'],
 ];
 
 function getBookMove() {
-    // Get history as UCI strings (e.g. "e2e4")
     const history = chess.history({ verbose: true }).map(m => m.from + m.to + (m.promotion || ''));
-    const ply = history.length; // Index where Black needs to play next
+    const ply = history.length;
 
     const matching = OWENS_LINES.filter(line => {
         if (line.length <= ply) return false;
-        // Only verify Black's previous moves (odd indices) must match
         for (let i = 1; i < ply; i += 2) {
             if (i < history.length && line[i] !== history[i]) return false;
         }
@@ -282,15 +313,12 @@ function getBookMove() {
 
     if (!matching.length) return null;
 
-    // Collect all unique Black responses and pick randomly for variation
-    const responses = [...new Set(matching.map(line => line[ply]).filter(Boolean))];
-    if (!responses.length) return null;
+    const chosenLine = matching[Math.floor(Math.random() * matching.length)];
+    const chosen = chosenLine[ply];
+    if (!chosen) return null;
 
-    const chosen = responses[Math.floor(Math.random() * responses.length)];
     const from = chosen.slice(0, 2);
-    const to   = chosen.slice(2, 4);
-
-    // Verify it's legal in the current position
+    const to = chosen.slice(2, 4);
     const legal = chess.moves({ verbose: true }).find(m => m.from === from && m.to === to);
     return legal ? chosen : null;
 }
