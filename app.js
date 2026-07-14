@@ -189,10 +189,10 @@ function handleBestMove(line) {
     let chosen = null;
 
     if (entries.length > 0) {
-        // Pick from top moves within 50cp of best — quality variations, not random
+        // Prefer the strongest move from Stockfish; randomize only among exact top-score ties.
         const best = Math.max(...entries.map(e => e.score));
-        const candidates = entries.filter(e => e.score >= best - 50);
-        chosen = candidates[Math.floor(Math.random() * candidates.length)].move;
+        const bestMoves = entries.filter(e => e.score === best);
+        chosen = bestMoves[Math.floor(Math.random() * bestMoves.length)].move;
     }
 
     if (!chosen) {
@@ -244,8 +244,8 @@ function getStockfishMove(fen, ms = 1200) {
 
 // ── OWEN'S DEFENSE OPENING BOOK ───────────────────────────────────────────────
 // 50+ accessible Owen's Defense variations for Black.
-// Each line is a UCI half-move sequence; odd indices are Black's moves.
-// Matching only requires Black's prior moves to fit the current position.
+// Each line is a UCI half-move sequence.
+// Matching requires the book line to follow the full move history exactly.
 const OWENS_LINES = [
     // === vs 1.e4 ===
     ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8b4'],
@@ -317,7 +317,7 @@ function isBookMoveAcceptable(uci) {
     const candidate = entries.find(e => e.move === uci);
     if (!candidate) return false;
 
-    return candidate.score >= bestScore - 80;
+    return candidate.score >= bestScore - 40;
 }
 
 function getBookMove() {
@@ -330,8 +330,8 @@ function getBookMove() {
         return { line, hash, used };
     }).filter(entry => {
         if (entry.line.length <= ply) return false;
-        for (let i = 1; i < ply; i += 2) {
-            if (i < history.length && entry.line[i] !== history[i]) return false;
+        for (let i = 0; i < ply; i++) {
+            if (entry.line[i] !== history[i]) return false;
         }
         return true;
     });
