@@ -26,6 +26,10 @@ let gameState = {
     accuracies: []
 };
 
+const MAX_RECENT_BOOK_LINES = 50;
+let sessionBookLineHistory = new Set();
+let recentBookLines = JSON.parse(localStorage.getItem('recentBookLines') || '[]');
+
 let matchHistory = JSON.parse(localStorage.getItem('matchHistory') || '[]');
 
 // ── DOM ────────────────────────────────────────────────────────────────────────
@@ -299,28 +303,61 @@ const OWENS_LINES = [
     ['g2g3','b7b6','c8b7','d2d4','e7e6','g1f3','f8b4'],
 ];
 
+function rememberRecentBookLine(hash) {
+    recentBookLines.unshift(hash);
+    if (recentBookLines.length > MAX_RECENT_BOOK_LINES) recentBookLines.length = MAX_RECENT_BOOK_LINES;
+    localStorage.setItem('recentBookLines', JSON.stringify(recentBookLines));
+}
+
+function isBookMoveAcceptable(uci) {
+    const entries = Object.values(sfMultiPV);
+    if (!entries.length) return true;
+
+    const bestScore = Math.max(...entries.map(e => e.score));
+    const candidate = entries.find(e => e.move === uci);
+    if (!candidate) return false;
+
+    return candidate.score >= bestScore - 80;
+}
+
 function getBookMove() {
     const history = chess.history({ verbose: true }).map(m => m.from + m.to + (m.promotion || ''));
     const ply = history.length;
 
-    const matching = OWENS_LINES.filter(line => {
-        if (line.length <= ply) return false;
+    const matching = OWENS_LINES.map(line => {
+        const hash = line.join('|');
+        const used = recentBookLines.filter(item => item === hash).length;
+        return { line, hash, used };
+    }).filter(entry => {
+        if (entry.line.length <= ply) return false;
         for (let i = 1; i < ply; i += 2) {
-            if (i < history.length && line[i] !== history[i]) return false;
+            if (i < history.length && entry.line[i] !== history[i]) return false;
         }
         return true;
     });
 
     if (!matching.length) return null;
 
-    const chosenLine = matching[Math.floor(Math.random() * matching.length)];
-    const chosen = chosenLine[ply];
+    const minUsed = Math.min(...matching.map(entry => entry.used));
+    const leastUsed = matching.filter(entry => entry.used === minUsed && !sessionBookLineHistory.has(entry.hash));
+    const pool = leastUsed.length ? leastUsed : matching.filter(entry => !sessionBookLineHistory.has(entry.hash));
+    const candidates = pool.length ? pool : matching;
+
+    // Prefer the least used candidate line and a random variation inside that set.
+    const chosenEntry = candidates[Math.floor(Math.random() * candidates.length)];
+    const chosen = chosenEntry.line[ply];
     if (!chosen) return null;
 
     const from = chosen.slice(0, 2);
     const to = chosen.slice(2, 4);
     const legal = chess.moves({ verbose: true }).find(m => m.from === from && m.to === to);
-    return legal ? chosen : null;
+    if (!legal) return null;
+
+    if (!isBookMoveAcceptable(chosen)) return null;
+
+    sessionBookLineHistory.add(chosenEntry.hash);
+    rememberRecentBookLine(chosenEntry.hash);
+    return chosen;
 }
 
 // ── BOARD ──────────────────────────────────────────────────────────────────────
@@ -572,6 +609,7 @@ function resetGame() {
     sfLiveEval = 0;
     evalBeforeUser = 0;
     sfMultiPV = {};
+    sessionBookLineHistory.clear();
 
     gameState = { ...gameState, moveNum: 1, isBotThinking: false, isGameOver: false, accuracies: [] };
 
