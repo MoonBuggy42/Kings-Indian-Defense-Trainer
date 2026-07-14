@@ -1,0 +1,6 @@
+﻿backup-unused/
+*.zip
+*.kts
+*.kt
+*.properties
+.env

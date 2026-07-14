@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Owen's Defense Trainer</title>
+    <meta name="description" content="Train against a 2600-rated Stockfish bot specializing in the Owen's Defense.">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0F172A">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        // Show errors in a non-blocking banner so we can debug on mobile
+        function showErrorBanner(msg) {
+            var b = document.getElementById('err-banner');
+            if (!b) {
+                b = document.createElement('div');
+                b.id = 'err-banner';
+                b.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#7f1d1d;color:#fff;font-size:12px;padding:6px 10px;z-index:99999;word-break:break-all;';
+                document.body.appendChild(b);
+            }
+            b.textContent = msg;
+        }
+        window.onerror = function(msg, url, line) {
+            console.error('[App Error]', msg, 'line:', line);
+            showErrorBanner('JS Error (line ' + line + '): ' + msg);
+            return true;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('[Promise Error]', event.reason);
+            showErrorBanner('Promise Error: ' + (event.reason && event.reason.message ? event.reason.message : event.reason));
+            event.preventDefault();
+        });
+    </script>
+
+    <!-- Chessboard.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-header">
+            <div class="header-left">
+                <h1>Owen's Trainer</h1>
+                <div class="status-indicator">
+                    <span class="dot blinking"></span>
+                    <span class="status-text" id="engine-status">Stockfish 2600 ELO</span>
+                </div>
+            </div>
+            <button id="settings-btn" class="icon-btn"><i class="fas fa-cog"></i></button>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            
+            <!-- PLAY TAB -->
+            <div id="tab-play" class="tab-content active">
+                
+                <!-- Match Status Bar -->
+                <div class="glass-panel stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-label">MOVE</span>
+                        <span class="stat-value" id="move-counter">1 / 25</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">ACCURACY</span>
+                        <span class="stat-value highlight" id="current-accuracy">100%</span>
+                    </div>
+                    <div class="eval-badge" id="eval-badge">
+                        <span id="eval-score">+0.0</span>
+                    </div>
+                </div>
+
+                <!-- Chess Board -->
+                <div class="board-wrapper glass-panel">
+                    <div id="board" style="width: 100%;"></div>
+                </div>
+
+                <!-- Feedback Panel -->
+                <div class="feedback-panel glass-panel" id="feedback-panel" style="display: none;">
+                    <div class="feedback-header">
+                        <div class="move-eval" id="move-eval-badge">
+                            <i class="fas fa-check" id="move-eval-icon"></i>
+                            <span id="move-eval-text">Good Move</span>
+                        </div>
+                        <div class="accuracy-pill">
+                            <span id="move-accuracy-score">95%</span> Accuracy
+                        </div>
+                    </div>
+                    <p class="explanation-text" id="white-explanation">Controls the center.</p>
+                    
+                    <div class="bot-response">
+                        <span class="bot-move-badge" id="black-move">b6</span>
+                        <span class="bot-explanation" id="black-explanation">Owen's Defense initiated.</span>
+                    </div>
+                </div>
+
+                <!-- Game Over Panel -->
+                <div class="game-over-panel glass-panel" id="game-over-panel" style="display: none;">
+                    <h2 id="game-over-title">Game Finished</h2>
+                    <p id="game-over-subtitle">Move 25 Reached</p>
+                    <div class="final-eval">
+                        <span id="final-better-position">Equal</span>
+                    </div>
+                    <button class="primary-btn" id="new-game-btn">Play Again</button>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="secondary-btn" id="undo-btn" disabled>
+                        <i class="fas fa-undo"></i> Undo
+                    </button>
+                    <button class="danger-btn" id="resign-btn">
+                        <i class="fas fa-flag"></i> Resign
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- DASHBOARD TAB -->
+            <div id="tab-dashboard" class="tab-content">
+                <div class="glass-panel summary-card">
+                    <h2>Overall Progress</h2>
+                    <div class="summary-stats">
+                        <div class="stat-circle">
+                            <svg viewBox="0 0 36 36" class="circular-chart blue">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" id="overall-accuracy-circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <text x="18" y="20.35" class="percentage" id="overall-accuracy-text">0%</text>
+                            </svg>
+                            <span>Avg Accuracy</span>
+                        </div>
+                        <div class="stat-numbers">
+                            <div class="num-item">
+                                <span class="num-val" id="total-games">0</span>
+                                <span class="num-label">Games</span>
+                            </div>
+                            <div class="num-item">
+                                <span class="num-val" id="white-better-pct">0%</span>
+                                <span class="num-label">White Better</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-list glass-panel">
+                    <h3>Match History</h3>
+                    <div id="history-container">
+                        <!-- History items injected via JS -->
+                        <div class="empty-state">No games played yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS MODAL -->
+            <div id="settings-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-content glass-panel">
+                    <div class="modal-header">
+                        <h2>Settings</h2>
+                        <button id="close-settings" class="icon-btn"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="gemini-key">Gemini API Key</label>
+                        <p class="help-text">Required for grandmaster move explanations. Get yours free at <strong>aistudio.google.com/app/apikey</strong></p>
+                        <input type="password" id="gemini-key" placeholder="AIzaSy..." class="glass-input">
+                        <button id="save-settings-btn" class="primary-btn">Save Key</button>
+                        <p id="key-status" style="margin-top:10px;font-size:13px;font-weight:600;text-align:center">Checking...</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav glass-nav">
+            <a href="#" class="nav-item active" data-target="tab-play">
+                <i class="fas fa-chess"></i>
+                <span>Train</span>
+            </a>
+            <a href="#" class="nav-item" data-target="tab-dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="chess.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
