@@ -27,7 +27,8 @@ let gameState = {
     moveNum: 1,             // White's move number
     isBotThinking: false,
     isGameOver: false,
-    accuracies: []
+    accuracies: [],
+    initialBotMoveProtected: false
 };
 
 const MAX_RECENT_BOOK_LINES = 50;
@@ -517,12 +518,18 @@ function undoMove() {
     const history = chess.history();
     if (!history.length || gameState.isBotThinking || gameState.isGameOver) return;
 
+    // Protect the initial automatic White move from being undone directly.
+    if (history.length === 1 && gameState.initialBotMoveProtected) return;
+
     if (history.length >= 2) {
         chess.undo();
         chess.undo();
     } else if (history.length === 1) {
         chess.undo();
     }
+
+    // If we've removed moves down to zero, clear the protection flag.
+    if (chess.history().length === 0) gameState.initialBotMoveProtected = false;
 
     gameState.moveNum = Math.max(1, gameState.moveNum - 1);
     if (gameState.accuracies.length) gameState.accuracies.pop();
@@ -535,7 +542,7 @@ function undoMove() {
     ui.moveCounter.textContent = `${gameState.moveNum} / ${MAX_MOVES}`;
     ui.feedbackPanel.style.display = 'none';
     board.position(chess.fen());
-    ui.undoBtn.disabled = chess.history().length === 0;
+    ui.undoBtn.disabled = chess.history().length === 0 || gameState.initialBotMoveProtected;
     setStatus('Stockfish 2600 ELO', false);
 }
 
@@ -603,7 +610,7 @@ function resetGame() {
     sfMultiPV = {};
     sessionBookLineHistory.clear();
 
-    gameState = { ...gameState, moveNum: 1, isBotThinking: false, isGameOver: false, accuracies: [] };
+    gameState = { ...gameState, moveNum: 1, isBotThinking: false, isGameOver: false, accuracies: [], initialBotMoveProtected: false };
 
     ui.gameOverPanel.style.display = 'none';
     ui.feedbackPanel.style.display = 'none';
@@ -646,7 +653,14 @@ async function playBotMove() {
     board.position(chess.fen());
     evalBeforeUser = sfLiveEval;
     gameState.isBotThinking = false;
-    ui.undoBtn.disabled = chess.history().length === 0;
+    // If this is the first automatic White move, protect it from direct undo.
+    if (chess.history().length === 1) {
+        gameState.initialBotMoveProtected = true;
+        ui.undoBtn.disabled = true;
+    } else {
+        gameState.initialBotMoveProtected = false;
+        ui.undoBtn.disabled = chess.history().length === 0;
+    }
     setStatus('Stockfish 2600 ELO', false);
 }
 
