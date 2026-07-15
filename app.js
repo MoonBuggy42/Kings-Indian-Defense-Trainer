@@ -245,84 +245,54 @@ function getStockfishMove(fen, ms = 1200) {
     });
 }
 
-// ── OWEN'S DEFENSE OPENING BOOK ───────────────────────────────────────────────
-// 50+ accessible Owen's Defense variations for Black.
-// Each line is a UCI half-move sequence.
+// ── KING'S INDIAN DEFENSE OPENING BOOK ──────────────────────────────────────
+// A collection of common KID variations (UCI half-move sequences).
 // Matching requires the book line to follow the full move history exactly.
 const OWENS_LINES = [
-    // === vs 1.e4 ===
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8b4'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','g8f6'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','f1d3','g8f6','g1f3','d7d5'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','g8f6','e4e5','f6d5','g1f3','e7e6'],
-    ['e2e4','b7b6','d2d4','c8b7','f2f3','e7e6','b1c3','g8f6'],
-    ['e2e4','b7b6','b1c3','c8b7','d2d4','e7e6','g1f3','g8f6'],
-    ['e2e4','b7b6','g1f3','c8b7','b1c3','e7e6','d2d4','g8f6'],
-    ['e2e4','b7b6','d2d3','c8b7','g2g3','e7e6','f1g2','d7d5'],
-    ['e2e4','b7b6','d2d4','c8b7','c1e3','e7e6','b1c3','f8b4'],
-    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1d2','g8f6'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','e7e6','f1d3','g8f6'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8b4'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','f1e2','g8f6'],
-    ['e2e4','b7b6','b1c3','c8b7','f2f3','e7e6','d2d4','g8f6'],
-    ['e2e4','b7b6','g1f3','c8b7','b1c3','e7e6','d2d4','f8b4'],
-    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','d7d5'],
-    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','g8f6','f1d3','f8b4'],
-    ['e2e4','b7b6','d2d4','c8b7','c1e3','g7g6','b1c3','e7e6'],
-    ['e2e4','b7b6','d2d4','c8b7','f1d3','e7e6','b1c3','g8f6'],
-    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','b8c6'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','g8f6','g1f3','d7d5'],
-    ['e2e4','b7b6','d2d4','c8b7','f2f3','g7g6','b1c3','e7e6'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','g1f3','f8g7'],
-    ['e2e4','b7b6','d2d4','c8b7','f1e2','e7e6','g1f3','g8f6'],
-    ['e2e4','b7b6','d2d4','c8b7','b1c3','e7e6','f1d3','g8f6'],
-    ['e2e4','b7b6','d2d4','c8b7','g1f3','e7e6','b1c3','e7e6','d2d4','g8f6'],
-    ['d2d4','b7b6','e2e4','c8b7','b1c3','e7e6','g1f3','g8f6'],
-    ['d2d4','b7b6','e2e4','c8b7','b1c3','g8f6','e4e5','f6d5'],
-    ['d2d4','b7b6','c2c4','c8b7','b1c3','e7e6','g1f3','g8f6'],
-    ['d2d4','b7b6','g1f3','c8b7','e2e4','e7e6','b1c3','g8f6'],
-    ['d2d4','b7b6','g1f3','c8b7','e2e3','e7e6','f1d3','d7d5'],
-    ['d2d4','b7b6','c2c4','c8b7','g1f3','e7e6','b1c3','g8f6'],
-    ['d2d4','b7b6','c2c4','c8b7','e2e3','e7e6','g1f3','f8b4'],
-    ['d2d4','b7b6','c2c4','c8b7','d2d4','g8f6','g1f3','e7e6'],
-    ['d2d4','b7b6','g1f3','c8b7','d2d4','e7e6','b1c3','g8f6'],
-    ['d2d4','b7b6','g1f3','c8b7','b1c3','e7e6','e2e4','g8f6'],
-    ['d2d4','b7b6','g1f3','c8b7','f2f3','e7e6','b1c3','g8f6'],
-    ['c2c4','b7b6','g1f3','c8b7','b1c3','e7e6','d2d4','g8f6'],
-    ['c2c4','b7b6','g1f3','c8b7','d2d4','e7e6','b1c3','g8f6'],
-    ['c2c4','b7b6','g1f3','c8b7','d2d4','g7g6','b1c3','e7e6'],
-    ['c2c4','b7b6','g1f3','c8b7','d2d4','e7e6','g2g3','g8f6'],
-    ['g1f3','b7b6','d2d4','c8b7','e2e4','e7e6','b1c3','g8f6'],
-    ['g1f3','b7b6','d2d4','c8b7','g2g3','e7e6','b1c3','g8f6'],
-    ['g1f3','b7b6','c2c4','c8b7','g2g3','e7e6','b1c3','g8f6'],
-    ['g2g3','b7b6','f1g2','c8b7','d2d4','e7e6','g1f3','g8f6'],
-    ['g2g3','b7b6','f1g2','c8b7','c2c4','e7e6','d2d4','g8f6'],
-    ['g2g3','b7b6','f1g2','c8b7','d2d4','e7e6','b1c3','g8f6'],
-    ['g2g3','b7b6','f1g2','c8b7','d2d4','e7e6','g1f3','g8f6'],
-    ['g2g3','b7b6','c8b7','d2d4','e7e6','g1f3','f8g7'],
-    ['g2g3','b7b6','c8b7','d2d4','e7e6','b1c3','g8f6'],
-    ['g2g3','b7b6','c8b7','d2d4','e7e6','c1e3','g8f6'],
-    ['g2g3','b7b6','c8b7','d2d4','e7e6','f1d3','g8f6'],
+    // Classical KID: 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4 d6
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6'],
+    // Fianchetto mainline: 1.d4 Nf6 2.c4 g6 3.Nf3 Bg7
+    ['d2d4','g8f6','c2c4','g7g6','g1f3','f8g7'],
+    // Averbakh variation: 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4 d6 5.Be2 O-O
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','f1e2','e8g8'],
+    // Bayonet attack begins: 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4 d6 5.Nf3 O-O 6.Be2 e5
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','g1f3','e8g8','f1e2','e7e5'],
+    // Petrosian system / Four Pawns: 1.d4 Nf6 2.c4 g6 3.e4
+    ['d2d4','g8f6','c2c4','g7g6','e2e4','f8g7'],
+    // Samisch idea: 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4 d6 5.f3
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','f2f3'],
+    // Saemisch with early ...c5
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','f2f3','c7c5'],
+    // Fianchetto reversed orders (for c4 played later)
+    ['c2c4','g8f6','d2d4','g7g6','b1c3','f8g7','e2e4','d7d6'],
+    // King's Indian via g3 lines
+    ['g1f3','g8f6','g2g3','g7g6','f1g2','f8g7','d2d4','d7d6'],
+    // Benoni-type transposition into KID setups
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','c7c5'],
+    // Additional common continuations
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','g1f3','e8g8'],
+    ['d2d4','g8f6','c2c4','g7g6','g1f3','f8g7','e2e4','d7d6','b1c3','e8g8'],
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','f1e2','e8g8'],
+    ['d2d4','g8f6','c2c4','g7g6','g1f3','f8g7','e2e4','d7d6','f1e2','c7c5'],
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','g1f3','e7e5'],
+    ['d2d4','g8f6','g1f3','g7g6','b1c3','f8g7','e2e4','d7d6'],
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','g1f3','e8g8','f1e2','e7e5'],
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','g1f3','e8g8','f1e2','c7c5'],
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','c2c4','c7c5'],
+    ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','f1e2','e8g8','g1f3','e7e5'],
+];
     ['g2g3','b7b6','c8b7','d2d4','e7e6','g1f3','f8b4'],
 ];
 
-const OWENS_LINE_PRIORITY = {
-    // Top theory lines for Owen's Defense
-    'e2e4|b7b6|d2d4|c8b7|b1c3|e7e6|g1f3|g8f6': 10,
-    'e2e4|b7b6|d2d4|c8b7|b1c3|e7e6|g1f3|f8b4': 12,
-    'e2e4|b7b6|d2d4|c8b7|b1c3|g8f6|e4e5|f6d5': 14,
-    'e2e4|b7b6|d2d4|c8b7|g1f3|e7e6|b1c3|g8f6': 16,
-    'e2e4|b7b6|d2d4|c8b7|g1f3|e7e6|b1c3|f8b4': 18,
-    'e2e4|b7b6|d2d4|c8b7|b1c3|e7e6|f1d3|g8f6': 20,
-    'e2e4|b7b6|d2d4|c8b7|g1f3|e7e6|b1c3|e7e6': 22,
-    'd2d4|b7b6|g1f3|c8b7|e2e4|e7e6|b1c3|g8f6': 24,
-    'd2d4|b7b6|g1f3|c8b7|e2e4|e7e6|g1f3|f8g7': 26,
-    'c2c4|b7b6|g1f3|c8b7|d2d4|e7e6|b1c3|g8f6': 28,
-    'g2g3|b7b6|f1g2|c8b7|d2d4|e7e6|g1f3|g8f6': 30,
-    'g2g3|b7b6|f1g2|c8b7|d2d4|e7e6|b1c3|g8f6': 32,
-    'g2g3|b7b6|c8b7|d2d4|e7e6|g1f3|f8g7': 34,
-    'e2e4|b7b6|d2d4|c8b7|c1e3|e7e6|b1c3|f8b4': 36,
-    'e2e4|b7b6|d2d4|c8b7|f2f3|e7e6|b1c3|g8f6': 38,
+const KID_LINE_PRIORITY = {
+    // Top theory lines for the King's Indian Defense (KID)
+    'd2d4|g8f6|c2c4|g7g6|b1c3|f8g7|e2e4|d7d6': 10,
+    'd2d4|g8f6|c2c4|g7g6|g1f3|f8g7|e2e4|d7d6': 12,
+    'd2d4|g8f6|c2c4|g7g6|b1c3|f8g7|e2e4|e7e5': 14,
+    'd2d4|g8f6|c2c4|g7g6|b1c3|f8g7|e2e4|d7d6|f1e2|e8g8': 16,
+    'd2d4|g8f6|c2c4|g7g6|g1f3|f8g7|e2e4|d7d6|b1c3|e8g8': 18,
+    'd2d4|g8f6|c2c4|g7g6|b1c3|f8g7|e2e4|d7d6|g1f3|e8g8|f1e2|e7e5': 20,
+    'd2d4|g8f6|c2c4|g7g6|b1c3|f8g7|e2e4|d7d6|g1f3|e8g8|f1e2|c7c5': 22,
 };
 
 function rememberRecentBookLine(hash) {
@@ -352,7 +322,7 @@ function getBookMove() {
     const candidates = OWENS_LINES.map(line => {
         const hash = line.join('|');
         const used = recentBookLines.filter(item => item === hash).length;
-        const priority = OWENS_LINE_PRIORITY[hash] ?? 100;
+        const priority = KID_LINE_PRIORITY[hash] ?? 100;
         return { line, hash, used, priority, isRecent: recentHashes.has(hash), isSession: sessionBookLineHistory.has(hash) };
     }).filter(entry => {
         if (entry.line.length <= ply) return false;
@@ -401,6 +371,7 @@ function initBoard() {
     board = Chessboard('board', {
         draggable: true,
         position: 'start',
+        orientation: 'black',
         onDragStart,
         onDrop,
         onSnapEnd: () => board.position(chess.fen()),
@@ -412,8 +383,8 @@ function initBoard() {
 function onDragStart(source, piece) {
     if (gameState.isGameOver || gameState.isBotThinking) return false;
     if (chess.game_over()) return false;
-    if (piece.startsWith('b')) return false;      // No black pieces
-    if (chess.turn() !== 'w') return false;        // Only on White's turn
+    if (piece.startsWith('w')) return false;      // User should not move White pieces (bot plays White)
+    if (chess.turn() !== 'b') return false;        // Only on Black's turn for the user
 }
 
 async function onDrop(source, target) {
@@ -438,11 +409,11 @@ async function onDrop(source, target) {
     }
 
     if (gameState.moveNum === 1) {
-        // ── Move 1: Always force b6 (Owen's Defense signature) ──
-        const b6Result = chess.move('b6');
+        // ── Move 1: King's Indian reply — play Nf6 ──
+        const nf6 = chess.move('g8f6');
         board.position(chess.fen());
         // First move is always classified as Good (no prior eval to compare)
-        completeTurn(userSan, b6Result ? b6Result.san : 'b6', 0);
+        completeTurn(userSan, nf6 ? nf6.san : 'Nf6', 0);
 
     } else {
         // ── Moves 2+: Stockfish analysis ──
@@ -657,6 +628,34 @@ function resetGame() {
     ui.undoBtn.disabled = true;
     ui.resignBtn.disabled = false;
     setStatus('Stockfish 2600 ELO', false);
+
+    // If the bot plays White, make White's initial move automatically.
+    // Run slightly async so UI updates first.
+    setTimeout(async () => {
+        if (chess.turn() === 'w') {
+            gameState.isBotThinking = true;
+            setStatus('Calculating...', true);
+            let botUCI = getBookMove() || await getStockfishMove(chess.fen(), 1200);
+            let botSan = '?';
+            if (botUCI && botUCI.length >= 4) {
+                const from = botUCI.slice(0, 2);
+                const to = botUCI.slice(2, 4);
+                const prom = botUCI.length > 4 ? botUCI[4] : undefined;
+                const moveObj = prom ? { from, to, promotion: prom } : { from, to };
+                let botResult = chess.move(moveObj);
+                if (!botResult) {
+                    const legals = chess.moves({ verbose: true });
+                    if (legals.length) botResult = chess.move(legals[Math.floor(Math.random() * legals.length)]);
+                }
+                if (botResult) botSan = botResult.san;
+            }
+            board.position(chess.fen());
+            evalBeforeUser = sfLiveEval;
+            completeTurn('—', botSan, 0);
+            gameState.isBotThinking = false;
+            setStatus('Stockfish 2600 ELO', false);
+        }
+    }, 150);
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
