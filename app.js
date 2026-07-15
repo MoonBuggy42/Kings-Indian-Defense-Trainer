@@ -1,4 +1,4 @@
-// app.js — Owen's Defense Trainer
+// app.js — King's Indian Defense Trainer
 // Evaluation: Pure Stockfish (centipawn loss). No external API needed.
 'use strict';
 
@@ -250,7 +250,7 @@ function getStockfishMove(fen, ms = 1200) {
 // ── KING'S INDIAN DEFENSE OPENING BOOK ──────────────────────────────────────
 // A collection of common KID variations (UCI half-move sequences).
 // Matching requires the book line to follow the full move history exactly.
-const OWENS_LINES = [
+const KID_LINES = [
     // Classical KID: 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4 d6
     ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6'],
     // Fianchetto mainline: 1.d4 Nf6 2.c4 g6 3.Nf3 Bg7
@@ -319,7 +319,7 @@ function getBookMove() {
     const bestScore = Math.max(...Object.values(sfMultiPV).map(e => e.score), -Infinity);
     const recentHashes = new Set(recentBookLines);
 
-    const candidates = OWENS_LINES.map(line => {
+    const candidates = KID_LINES.map(line => {
         const hash = line.join('|');
         const used = recentBookLines.filter(item => item === hash).length;
         const priority = KID_LINE_PRIORITY[hash] ?? 100;
@@ -480,26 +480,26 @@ const QUAL_DESC = {
 };
 
 const BOT_DESC = {
-    'b6':  "Owen's Defense — controls c5.",
-    'Bb7': "Fianchettoed bishop activates.",
-    'e6':  "Solid pawn structure, opens Bb7.",
-    'Nf6': "Develops and attacks the center.",
-    'Bb4': "Pins Nc3, adds pressure.",
-    'd5':  "Central counterattack!",
-    'Be7': "Safe square, prepares castling.",
-    'O-O': "King safety, connects rooks.",
-    'd6':  "Supports center, flexible.",
-    'Nc6': "Fights for the center.",
-    'Na6': "Unusual but valid development.",
-    'Nd5': "Central domination.",
-    'Nxd4':'Recaptures, equalises.",',
+    'b6':  "KID-style defense, aiming for ...c5.",
+    'Bb7': "Fianchettoed bishop eyes the long diagonal.",
+    'e6':  "Solid pawn chain and flexible center.",
+    'Nf6': "Natural development, eyes e4.",
+    'Bb4': "Pins Nc3 and increases pressure.",
+    'd5':  "Seizes central counterplay.",
+    'Be7': "Prepares castling and kingside safety.",
+    'O-O': "King safety secured, rooks connected.",
+    'd6':  "Supports the center, typical KID structure.",
+    'Nc6': "Jump to c6 to fight for the center.",
+    'Na6': "A thematic maneuver in some KID lines.",
+    'Nd5': "Central knight outpost.",
+    'Nxd4': "Recaptures and maintains tension.",
     '—':   "Game finished."
 };
 
 function showFeedback(quality, userSan, botSan) {
     const descs = QUAL_DESC[quality.type] || QUAL_DESC['Good'];
     const desc  = descs[Math.floor(Math.random() * descs.length)];
-    const botDesc = BOT_DESC[botSan] || `Owen's Defense: ${botSan}.`;
+    const botDesc = BOT_DESC[botSan] || `King's Indian Defense: ${botSan}.`;
 
     ui.evalText.textContent = `${quality.type} Move`;
     ui.evalIcon.className = `fas ${quality.icon}`;
@@ -513,13 +513,14 @@ function showFeedback(quality, userSan, botSan) {
 
 // ── UNDO ──────────────────────────────────────────────────────────────────────
 function undoMove() {
-    if (gameState.moveNum <= 1 || gameState.isBotThinking || gameState.isGameOver) return;
+    const history = chess.history();
+    if (!history.length || gameState.isBotThinking || gameState.isGameOver) return;
 
-    if (chess.turn() === 'w') {
-        chess.undo(); // Undo Black's last move
-        chess.undo(); // Undo White's last move
-    } else {
-        chess.undo(); // Desync state: only undo White's move
+    if (history.length >= 2) {
+        chess.undo();
+        chess.undo();
+    } else if (history.length === 1) {
+        chess.undo();
     }
 
     gameState.moveNum = Math.max(1, gameState.moveNum - 1);
@@ -533,7 +534,8 @@ function undoMove() {
     ui.moveCounter.textContent = `${gameState.moveNum} / ${MAX_MOVES}`;
     ui.feedbackPanel.style.display = 'none';
     board.position(chess.fen());
-    ui.undoBtn.disabled = gameState.moveNum <= 1;
+    ui.undoBtn.disabled = chess.history().length === 0;
+    setStatus('Stockfish 2600 ELO', false);
 }
 
 // ── RESIGN / GAME OVER ────────────────────────────────────────────────────────
@@ -642,8 +644,8 @@ async function playBotMove() {
 
     board.position(chess.fen());
     evalBeforeUser = sfLiveEval;
-    completeTurn('—', botSan, 0);
     gameState.isBotThinking = false;
+    ui.undoBtn.disabled = chess.history().length === 0;
     setStatus('Stockfish 2600 ELO', false);
 }
 
