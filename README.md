@@ -1,6 +1,6 @@
-# Owens Defense Trainer Web
+# King's Indian Defense Trainer
 
-This repository now contains only the static website for the Owen's Defense trainer.
+This repository now contains only the static website for the King's Indian Defense trainer.
 
 ## Files
 - `index.html` — the main web page
