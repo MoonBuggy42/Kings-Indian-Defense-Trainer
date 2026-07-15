@@ -413,7 +413,8 @@ async function onDrop(source, target) {
 
     // sfLiveEval is now set = White's eval of position after the user's Black move.
     const evalAfterUser = sfLiveEval;
-    const cplLoss = evalBeforeUser - evalAfterUser;
+    // For Black-as-user, a good move lowers White's evaluation, so invert the sign.
+    const cplLoss = evalAfterUser - evalBeforeUser;
 
     let botUCI = getBookMove() || sfUCI;
     let botSan = '?';
