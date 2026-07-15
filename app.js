@@ -17,6 +17,7 @@ let sfReady = false;
 let sfResolve = null;
 let sfTimeoutId = null;
 let sfMultiPV = {};
+let sfAnalysisTurn = 'w';
 
 // Evaluation tracking (always in White's perspective, in pawns)
 let sfLiveEval = 0;         // Updated live during Stockfish analysis
@@ -86,6 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.undoBtn.addEventListener('click', undoMove);
     ui.resignBtn.addEventListener('click', resignGame);
     ui.newGameBtn.addEventListener('click', resetGame);
+
+    resetGame();
 });
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
@@ -167,10 +170,9 @@ function parseInfo(line) {
 
     sfMultiPV[idx] = { move: mvM[1], score };
 
-    // Stockfish is called when it's Black's turn → score is from Black's perspective.
-    // Negate to get White's perspective for display.
+    // Score normalization: always display from White's perspective.
     if (idx === 1) {
-        const whiteScore = -score;
+        const whiteScore = sfAnalysisTurn === 'b' ? -score : score;
         if (sM[1] === 'cp') {
             sfLiveEval = whiteScore / 100;
             const prefix = sfLiveEval > 0 ? '+' : '';
@@ -406,51 +408,33 @@ async function onDrop(source, target) {
         return;
     }
 
-    if (gameState.moveNum === 1) {
-        // ── Move 1: King's Indian reply — play Nf6 ──
-        const nf6 = chess.move('g8f6');
-        board.position(chess.fen());
-        // First move is always classified as Good (no prior eval to compare)
-        completeTurn(userSan, nf6 ? nf6.san : 'Nf6', 0);
+    // ── Black user's move followed by White bot move ──
+    const sfUCI = await getStockfishMove(chess.fen(), 1200);
 
-    } else {
-        // ── Moves 2+: Stockfish analysis ──
-        // Run Stockfish on position AFTER user's move (Black to move).
-        // This gives us: eval after user's move AND bot's candidate moves.
-        const sfUCI = await getStockfishMove(chess.fen(), 1200);
+    // sfLiveEval is now set = White's eval of position after the user's Black move.
+    const evalAfterUser = sfLiveEval;
+    const cplLoss = evalBeforeUser - evalAfterUser;
 
-        // sfLiveEval is now set = White's eval of position AFTER user's move
-        const evalAfterUser = sfLiveEval;
-        // CPL loss for White (positive = White lost centipawns = bad move)
-        const cplLoss = evalBeforeUser - evalAfterUser;
+    let botUCI = getBookMove() || sfUCI;
+    let botSan = '?';
 
-        // Determine bot's move: opening book first, then Stockfish
-        let botUCI = getBookMove() || sfUCI;
-        let botSan = '?';
+    if (botUCI && botUCI.length >= 4) {
+        const from = botUCI.slice(0, 2);
+        const to   = botUCI.slice(2, 4);
+        const prom = botUCI.length > 4 ? botUCI[4] : undefined;
+        const moveObj = prom ? { from, to, promotion: prom } : { from, to };
 
-        if (botUCI && botUCI.length >= 4) {
-            const from = botUCI.slice(0, 2);
-            const to   = botUCI.slice(2, 4);
-            const prom = botUCI.length > 4 ? botUCI[4] : undefined;
-            const moveObj = prom ? { from, to, promotion: prom } : { from, to };
-
-            let botResult = chess.move(moveObj);
-            if (!botResult) {
-                // Move rejected (shouldn't happen with book check) — play random
-                const legals = chess.moves({ verbose: true });
-                if (legals.length) botResult = chess.move(legals[Math.floor(Math.random() * legals.length)]);
-            }
-            if (botResult) botSan = botResult.san;
+        let botResult = chess.move(moveObj);
+        if (!botResult) {
+            const legals = chess.moves({ verbose: true });
+            if (legals.length) botResult = chess.move(legals[Math.floor(Math.random() * legals.length)]);
         }
-
-        board.position(chess.fen());
-
-        // Update evalBeforeUser for next round.
-        // After bot plays best Black move, eval ≈ sfLiveEval (set before bot moved).
-        evalBeforeUser = sfLiveEval;
-
-        completeTurn(userSan, botSan, cplLoss);
+        if (botResult) botSan = botResult.san;
     }
+
+    board.position(chess.fen());
+    evalBeforeUser = sfLiveEval;
+    completeTurn(userSan, botSan, cplLoss);
 }
 
 // ── TURN COMPLETION ───────────────────────────────────────────────────────────
@@ -627,34 +611,42 @@ function resetGame() {
     ui.resignBtn.disabled = false;
     setStatus('Stockfish 2600 ELO', false);
 
-    // If the bot plays White, make White's initial move automatically.
-    // Run slightly async so UI updates first.
-    setTimeout(async () => {
+    setTimeout(() => {
         if (chess.turn() === 'w') {
-            gameState.isBotThinking = true;
-            setStatus('Calculating...', true);
-            let botUCI = getBookMove() || await getStockfishMove(chess.fen(), 1200);
-            let botSan = '?';
-            if (botUCI && botUCI.length >= 4) {
-                const from = botUCI.slice(0, 2);
-                const to = botUCI.slice(2, 4);
-                const prom = botUCI.length > 4 ? botUCI[4] : undefined;
-                const moveObj = prom ? { from, to, promotion: prom } : { from, to };
-                let botResult = chess.move(moveObj);
-                if (!botResult) {
-                    const legals = chess.moves({ verbose: true });
-                    if (legals.length) botResult = chess.move(legals[Math.floor(Math.random() * legals.length)]);
-                }
-                if (botResult) botSan = botResult.san;
-            }
-            board.position(chess.fen());
-            evalBeforeUser = sfLiveEval;
-            completeTurn('—', botSan, 0);
-            gameState.isBotThinking = false;
-            setStatus('Stockfish 2600 ELO', false);
+            playBotMove();
         }
     }, 150);
 }
+
+async function playBotMove() {
+    if (gameState.isGameOver || gameState.isBotThinking) return;
+
+    gameState.isBotThinking = true;
+    setStatus('Calculating...', true);
+
+    let botUCI = getBookMove() || await getStockfishMove(chess.fen(), 1200);
+    let botSan = '?';
+
+    if (botUCI && botUCI.length >= 4) {
+        const from = botUCI.slice(0, 2);
+        const to = botUCI.slice(2, 4);
+        const prom = botUCI.length > 4 ? botUCI[4] : undefined;
+        const moveObj = prom ? { from, to, promotion: prom } : { from, to };
+        let botResult = chess.move(moveObj);
+        if (!botResult) {
+            const legals = chess.moves({ verbose: true });
+            if (legals.length) botResult = chess.move(legals[Math.floor(Math.random() * legals.length)]);
+        }
+        if (botResult) botSan = botResult.san;
+    }
+
+    board.position(chess.fen());
+    evalBeforeUser = sfLiveEval;
+    completeTurn('—', botSan, 0);
+    gameState.isBotThinking = false;
+    setStatus('Stockfish 2600 ELO', false);
+}
+
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function setStatus(text, blink) {
