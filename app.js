@@ -281,8 +281,6 @@ const OWENS_LINES = [
     ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','c2c4','c7c5'],
     ['d2d4','g8f6','c2c4','g7g6','b1c3','f8g7','e2e4','d7d6','f1e2','e8g8','g1f3','e7e5'],
 ];
-    ['g2g3','b7b6','c8b7','d2d4','e7e6','g1f3','f8b4'],
-];
 
 const KID_LINE_PRIORITY = {
     // Top theory lines for the King's Indian Defense (KID)
